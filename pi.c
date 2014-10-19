@@ -7,7 +7,7 @@
 #endif
 #define RAND_UPBOUND 25000
 #define HALF_BOUND (RAND_UPBOUND/2)
-#define randGen() ((long double)(Rand()%RAND_UPBOUND) / HALF_BOUND - 1.0)
+#define randGen() ((double)(Rand()%RAND_UPBOUND) / HALF_BOUND - 1.0)
 #define SHOW_TIME
 
 long part_in[MAX_THREAD];  
@@ -18,9 +18,9 @@ long number_of_tosses;
 
 inline int Rand(){
     int val;
-    //pthread_mutex_lock(&mutex);
-    val = 5656*4145;//rand();
-    //pthread_mutex_unlock(&mutex);
+    pthread_mutex_lock(&mutex);
+    val = rand();
+    pthread_mutex_unlock(&mutex);
     return val;
 }
 
@@ -30,8 +30,8 @@ void* go_rand(void* p_rank){
     //printf("Thread %d , count :%d\n",rank,number_of_tosses);
     long number_in_circle = 0;
     long toss;
-    long double distance_squared,x,y;
-    long double result = 0.0;   
+    double distance_squared,x,y;
+    double result = 0.0;   
     for ( toss = 0; toss < number_of_tosses ; toss ++) {
         //pthread_mutex_lock(&mutex);
         x = randGen();
@@ -50,7 +50,7 @@ void* go_rand(void* p_rank){
     return NULL;    
 }
 
-long double calculatePI(long total_tosses){
+double calculatePI(long total_tosses){
     long sum_in = total_in;
     /*long i;
     for(i=0;i<MAX_THREAD;i++){
@@ -58,7 +58,7 @@ long double calculatePI(long total_tosses){
     } 
     */
 
-    return 4.0*(long double)sum_in / total_tosses;
+    return 4.0*(double)sum_in / total_tosses;
     
 }
 
@@ -85,7 +85,7 @@ int main(int argc,char** argv){
     pthread_mutex_destroy(&mutex);
     free(threads_ptr);
 
-    printf("%llf\n",calculatePI(total_tosses)); 
+    printf("%lf\n",calculatePI(total_tosses)); 
 
     //clock_t end_time = clock();
 #ifdef SHOW_TIME
