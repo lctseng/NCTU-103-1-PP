@@ -1,0 +1,3 @@
+#!/bin/sh
+gcc pi.c  -o pi -lpthread -D MAX_THREAD=$1
+./pi $2
