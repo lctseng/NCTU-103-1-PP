@@ -10,11 +10,12 @@
 #define randGen() ((double)(Rand()%RAND_UPBOUND) / HALF_BOUND - 1.0)
 #define SHOW_TIME
 
-long part_in[MAX_THREAD];  
-long total_in;
+typedef long long int toss_t;
+toss_t part_in[MAX_THREAD];  
+toss_t total_in;
 
 pthread_mutex_t mutex;
-long number_of_tosses;
+toss_t number_of_tosses;
 
 inline int Rand(){
     int val;
@@ -28,8 +29,8 @@ void* go_rand(void* p_rank){
     long rank = (long)p_rank;
     //clock_t start_time = clock();
     //printf("Thread %d , count :%d\n",rank,number_of_tosses);
-    long number_in_circle = 0;
-    long toss;
+    toss_t number_in_circle = 0;
+    toss_t toss;
     double distance_squared,x,y;
     double result = 0.0;   
     for ( toss = 0; toss < number_of_tosses ; toss ++) {
@@ -50,8 +51,8 @@ void* go_rand(void* p_rank){
     return NULL;    
 }
 
-double calculatePI(long total_tosses){
-    long sum_in = total_in;
+double calculatePI(toss_t total_tosses){
+    toss_t sum_in = total_in;
     /*long i;
     for(i=0;i<MAX_THREAD;i++){
         sum_in += part_in[i];
@@ -63,9 +64,9 @@ double calculatePI(long total_tosses){
 }
 
 int main(int argc,char** argv){
-    long total_in = 0;
+    toss_t total_in = 0;
     //clock_t start_time = clock();
-    long total_tosses = atoi(argv[1]); 
+    toss_t total_tosses = atoi(argv[1]); 
     number_of_tosses = total_tosses / MAX_THREAD + 1;
     const long thread_count = MAX_THREAD;
     pthread_t* threads_ptr = (pthread_t*)malloc(sizeof(pthread_t)*thread_count);
