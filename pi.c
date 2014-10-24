@@ -70,6 +70,7 @@ double calculatePI(toss_t total_tosses){
 
 int main(int argc,char** argv){
     toss_t total_in = 0;
+    time_t start = time(0);
     // random seed
     srand(time(0));
     // arrange workload for each thread
@@ -94,6 +95,10 @@ int main(int argc,char** argv){
     pthread_mutex_destroy(&mutex);
     free(threads_ptr);
 
+    time_t finish = time(0);
+#ifdef SHOW_TIME
+    printf("Time:%u\n",(unsigned)(finish-start));
+#endif
     printf("%lf\n",calculatePI(total_tosses)); 
 
     return 0;
