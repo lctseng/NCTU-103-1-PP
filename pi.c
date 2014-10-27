@@ -3,13 +3,12 @@
 #include<pthread.h>
 #include<limits.h>
 #include<time.h>
-// for test, specific number of threads
-#ifndef MAX_THREAD
-#define MAX_THREAD 15
-#endif
+#include<sys/time.h>
+#include<sys/sysinfo.h>
 // for random function
 #define RAND_UPBOUND 32768
 #define HALF_BOUND (RAND_UPBOUND/2)
+#define SHOW_TIME
 // convert integer random value to floating type
 #define randGen(seed) ((double)(Rand(seed)%RAND_UPBOUND) / HALF_BOUND - 1.0)
 
@@ -19,8 +18,9 @@ typedef long long int toss_t;
 toss_t total_in;
 
 
+int max_thread;
 // random seeds for each threads
-int seed_table[MAX_THREAD];
+int *seed_table;
 
 // mutex 
 pthread_mutex_t mutex;
@@ -69,14 +69,24 @@ double calculatePI(toss_t total_tosses){
 }
 
 int main(int argc,char** argv){
+#ifndef MAX_THREAD
+    max_thread = get_nprocs();
+#else
+    max_thread = MAX_THREAD;
+#endif
+    printf("Number of processors:%d\n",max_thread);
+    struct timeval start,end;
+    gettimeofday(&start,0);
+
+    seed_table = (int *)malloc(sizeof(int)*max_thread);
+
     toss_t total_in = 0;
-    time_t start = time(0);
     // random seed
     srand(time(0));
     // arrange workload for each thread
     toss_t total_tosses = atoll(argv[1]); 
-    number_of_tosses = total_tosses / MAX_THREAD + 1;
-    const long thread_count = MAX_THREAD;
+    number_of_tosses = total_tosses / max_thread + 1;
+    const long thread_count = max_thread;
     pthread_t* threads_ptr = (pthread_t*)malloc(sizeof(pthread_t)*thread_count);
  
     long i = 0;
@@ -94,10 +104,14 @@ int main(int argc,char** argv){
     }
     pthread_mutex_destroy(&mutex);
     free(threads_ptr);
+    free(seed_table);
 
-    time_t finish = time(0);
+    gettimeofday(&end,0);
+    int sec=end.tv_sec-start.tv_sec;
+    int usec=end.tv_usec-start.tv_usec;
+    
 #ifdef SHOW_TIME
-    printf("Time:%u\n",(unsigned)(finish-start));
+    printf("Elapsed Time:%lf\n",(sec*1000+(usec/1000.0))/1000);
 #endif
     printf("%lf\n",calculatePI(total_tosses)); 
 

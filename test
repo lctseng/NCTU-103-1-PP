@@ -1,3 +1,3 @@
 #!/bin/sh -e
-gcc pi.c  -o pi.out -lpthread -D MAX_THREAD=$1
-./pi.out $2
+gcc pi.c -O2 -o pi.test.out -lpthread -D MAX_THREAD=$1
+./pi.test.out $2

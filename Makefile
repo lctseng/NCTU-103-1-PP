@@ -1,5 +1,4 @@
 all:
-	gcc pi.c  -o pi -lpthread
-	./pi 5000000
+	gcc pi.c -O2 -o hw1_pthread -lpthread
 run:	
 	./pi 5000000
