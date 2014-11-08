@@ -1,0 +1,3 @@
+#!/bin/sh
+make clean && make DATASIZE=$1
+./bin/cg
