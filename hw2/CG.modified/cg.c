@@ -94,7 +94,7 @@ static void vecset(int n, double v[], int iv[], int *nzv, int i, double val);
 int main(int argc, char *argv[])
 {
   thread_num = get_nprocs();
-  //omp_set_num_threads(4);
+  //omp_set_num_threads(3);
   int i, j, k, it;
 
   double zeta;
