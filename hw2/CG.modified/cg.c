@@ -4,13 +4,12 @@
 
 #include "omp.h"
 #include "unistd.h"
-#include "sys/sysinfo.h"
 
 #include "globals.h"
 #include "randdp.h"
 #include "timers.h"
 
-#define CACHE_LINE_PAD 8
+#define CACHE_LINE_PAD 16
 //---------------------------------------------------------------------
 
 static int thread_num;
@@ -175,14 +174,14 @@ int main(int argc, char *argv[])
   }
 
   zeta = 0.0;
-  /*
+  
   // Make cache 
   pad_r = malloc(sizeof(double*)*NA);
   int pad_i;
   for(pad_i=0;pad_i<NA;pad_i++){
     pad_r[pad_i] = malloc(sizeof(double)*CACHE_LINE_PAD);
   }
-  */
+  
   
   //---------------------------------------------------------------------
   //---->
@@ -256,9 +255,11 @@ int main(int argc, char *argv[])
     //---------------------------------------------------------------------
     norm_temp1 = 0.0;
     norm_temp2 = 0.0;
-    for (j = 0; j < lastcol - firstcol + 1; j++) {
-      norm_temp1 = norm_temp1 + x[j]*z[j];
-      norm_temp2 = norm_temp2 + z[j]*z[j];
+    int times = lastcol - firstcol + 1;
+#   pragma omp parallel for reduction(+:norm_temp1) reduction(+:norm_temp2) 
+    for (j = 0; j < times; j++) {
+      norm_temp1 += x[j]*z[j];
+      norm_temp2 += z[j]*z[j];
     }
 
     norm_temp2 = 1.0 / sqrt(norm_temp2);
@@ -277,12 +278,12 @@ int main(int argc, char *argv[])
   } // end of main iter inv pow meth
 
   // Free Cache
-  /* 
+   
   for(pad_i=0;pad_i<NA;pad_i++){
     free(pad_r[pad_i]);
   }
   free(pad_r);
-  */
+  
   timer_stop(T_bench);
 
   //---------------------------------------------------------------------
@@ -337,7 +338,9 @@ static void conj_grad(int colidx[],
   //---------------------------------------------------------------------
   // Initialize the CG algorithm:
   //---------------------------------------------------------------------
-  for (j = 0; j < naa+1; j++) {
+  int naap1 = naa+1;
+# pragma omp parallel for
+  for (j = 0; j < naap1; j++) {
     q[j] = 0.0;
     z[j] = 0.0;
     r[j] = x[j];
@@ -370,17 +373,15 @@ static void conj_grad(int colidx[],
     //       The unrolled-by-8 version below is significantly faster
     //       on the Cray t3d - overall speed of code is 1.5 times faster.
    
-#   pragma omp parallel for
+    d = 0.0;
+#   pragma omp parallel for private(k) private(sum) reduction(+:d)
     for (j = 0; j < upper; j++) {
-      double sum;
-      int k;
       sum = 0.0;
       for (k = rowstr[j]; k < rowstr[j+1]; k++) {
         sum = sum + a[k]*p[colidx[k]];
       }
       //pad_r[j][0] = sum;
       q[j] = sum;
-    }
     /*
     for (j = 0; j < upper; j++) {
       q[j] = pad_r[j][0];
@@ -393,16 +394,10 @@ static void conj_grad(int colidx[],
     //---------------------------------------------------------------------
     // Obtain p.q
     //---------------------------------------------------------------------
-    d = 0.0;
-#   pragma omp parallel
-    {
       double x;
-#     pragma omp for reduction(+:d)
-      for (j = 0; j < upper; j++) {
-        x =  p[j]*q[j];
-        d+=x;
-        //d = d + p[j]*q[j];
-      }
+      x =  p[j]*q[j];
+      d+=x;
+      //d = d + p[j]*q[j];
     }
     
 
@@ -421,18 +416,15 @@ static void conj_grad(int colidx[],
     // and    r = r - alpha*q
     //---------------------------------------------------------------------
     rho = 0.0;
-#   pragma omp parallel for
+#   pragma omp parallel for reduction(+:rho)
     for (j = 0; j < upper; j++) {
       z[j] = z[j] + alpha*p[j];  
       r[j] = r[j] - alpha*q[j];
-    }
             
     //---------------------------------------------------------------------
     // rho = r.r
     // Now, obtain the norm of r: First, sum squares of r elements locally...
     //---------------------------------------------------------------------
-#   pragma omp parallel for reduction(+:rho)
-    for (j = 0; j < upper; j++) {
       rho += r[j]*r[j];
     }
 
@@ -456,31 +448,32 @@ static void conj_grad(int colidx[],
   // The partition submatrix-vector multiply
   //---------------------------------------------------------------------
   sum = 0.0;
-# pragma omp parallel for
+# pragma omp parallel for private(d) private(k)
   for (j = 0; j < upper; j++) {
-    double d = 0.0;
-    int k,rtop = rowstr[j+1];
+    d = 0.0;
+    int rtop = rowstr[j+1];
     for (k = rowstr[j]; k < rtop; k++) {
       d = d + a[k]*z[colidx[k]];
     }
-    r[j] = d;
-    //pad_r[j][0] = d;
+    //r[j] = d;
+    pad_r[j][0] = d;
   }
 
-  /*
+  
   for (j = 0; j < upper; j++) {
    r[j] = pad_r[j][0];
     
   }
-  */
+  
   
   //---------------------------------------------------------------------
   // At this point, r contains A.z
   //---------------------------------------------------------------------
-  
+ 
+# pragma omp parallel for reduction(+:sum) private(d)
   for (j = 0; j < upper; j++) {
     d   = x[j] - r[j];
-    sum = sum + d*d;
+    sum += d*d;
   }
 
   *rnorm = sqrt(sum);
