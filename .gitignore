@@ -1,3 +1,6 @@
 pi.out
 pi.test.out
 hw1_pthread
+hw2/CG.modified/bin
+hw2/CG/bin
+*.swp
